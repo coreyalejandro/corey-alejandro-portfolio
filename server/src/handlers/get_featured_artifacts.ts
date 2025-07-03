@@ -1,8 +1,8 @@
 
 import { db } from '../db';
 import { portfolioArtifactsTable } from '../db/schema';
-import { type PortfolioArtifact } from '../schema';
 import { eq } from 'drizzle-orm';
+import { type PortfolioArtifact } from '../schema';
 
 export const getFeaturedArtifacts = async (): Promise<PortfolioArtifact[]> => {
   try {
@@ -11,7 +11,7 @@ export const getFeaturedArtifacts = async (): Promise<PortfolioArtifact[]> => {
       .where(eq(portfolioArtifactsTable.is_featured, true))
       .execute();
 
-    // Convert numeric fields back to numbers for proper typing
+    // Convert numeric fields back to numbers for proper type conformance
     return results.map(artifact => ({
       ...artifact,
       position_x: parseFloat(artifact.position_x),

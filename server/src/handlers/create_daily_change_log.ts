@@ -9,16 +9,15 @@ export const createDailyChangeLog = async (input: CreateDailyChangeLogInput): Pr
     const result = await db.insert(dailyChangeLogsTable)
       .values({
         date: input.date,
-        changes: input.changes
+        changes: input.changes // JSONB field - no conversion needed
       })
       .returning()
       .execute();
 
-    // Convert the result to match the expected schema type
     const changeLog = result[0];
     return {
       ...changeLog,
-      changes: changeLog.changes as DailyChangeLog['changes']
+      changes: changeLog.changes as any // Type assertion for JSONB field
     };
   } catch (error) {
     console.error('Daily change log creation failed:', error);

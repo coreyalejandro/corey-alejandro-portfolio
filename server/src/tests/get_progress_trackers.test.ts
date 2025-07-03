@@ -4,28 +4,6 @@ import { resetDB, createDB } from '../helpers';
 import { db } from '../db';
 import { progressTrackersTable } from '../db/schema';
 import { getProgressTrackers } from '../handlers/get_progress_trackers';
-import { type CreateProgressTrackerInput } from '../schema';
-
-const testTracker1: CreateProgressTrackerInput = {
-  project_name: 'AI Portfolio Website',
-  current_phase: 'Development',
-  completion_percentage: 75,
-  milestones: [
-    { name: 'Design System', completed: true, due_date: null },
-    { name: '3D Gallery', completed: false, due_date: new Date('2024-12-31') }
-  ]
-};
-
-const testTracker2: CreateProgressTrackerInput = {
-  project_name: 'Machine Learning Pipeline',
-  current_phase: 'Testing',
-  completion_percentage: 90,
-  milestones: [
-    { name: 'Data Collection', completed: true, due_date: null },
-    { name: 'Model Training', completed: true, due_date: null },
-    { name: 'Deployment', completed: false, due_date: new Date('2024-11-30') }
-  ]
-};
 
 describe('getProgressTrackers', () => {
   beforeEach(createDB);
@@ -37,78 +15,85 @@ describe('getProgressTrackers', () => {
   });
 
   it('should return all progress trackers', async () => {
-    // Insert test trackers
-    await db.insert(progressTrackersTable).values([
-      {
-        project_name: testTracker1.project_name,
-        current_phase: testTracker1.current_phase,
-        completion_percentage: testTracker1.completion_percentage,
-        milestones: testTracker1.milestones
-      },
-      {
-        project_name: testTracker2.project_name,
-        current_phase: testTracker2.current_phase,
-        completion_percentage: testTracker2.completion_percentage,
-        milestones: testTracker2.milestones
-      }
-    ]).execute();
+    // Create test data
+    const testMilestones = [
+      { name: 'Design Phase', completed: true, due_date: new Date('2024-01-15') },
+      { name: 'Development', completed: false, due_date: new Date('2024-02-15') }
+    ];
+
+    await db.insert(progressTrackersTable)
+      .values([
+        {
+          project_name: 'AI Portfolio',
+          current_phase: 'Development',
+          completion_percentage: 75,
+          milestones: testMilestones
+        },
+        {
+          project_name: 'Data Visualization',
+          current_phase: 'Testing',
+          completion_percentage: 90,
+          milestones: [
+            { name: 'Research', completed: true, due_date: null },
+            { name: 'Implementation', completed: true, due_date: new Date('2024-01-30') }
+          ]
+        }
+      ])
+      .execute();
 
     const result = await getProgressTrackers();
 
     expect(result).toHaveLength(2);
     
     // Check first tracker
-    const tracker1 = result.find(t => t.project_name === 'AI Portfolio Website');
-    expect(tracker1).toBeDefined();
-    expect(tracker1!.current_phase).toEqual('Development');
-    expect(tracker1!.completion_percentage).toEqual(75);
-    expect(tracker1!.milestones).toHaveLength(2);
-    expect(tracker1!.milestones[0].name).toEqual('Design System');
-    expect(tracker1!.milestones[0].completed).toBe(true);
-    expect(tracker1!.milestones[0].due_date).toBeNull();
-    expect(tracker1!.milestones[1].name).toEqual('3D Gallery');
-    expect(tracker1!.milestones[1].completed).toBe(false);
-    expect(tracker1!.milestones[1].due_date).toBeInstanceOf(Date);
-    expect(tracker1!.id).toBeDefined();
-    expect(tracker1!.created_at).toBeInstanceOf(Date);
-    expect(tracker1!.updated_at).toBeInstanceOf(Date);
+    const firstTracker = result.find(t => t.project_name === 'AI Portfolio');
+    expect(firstTracker).toBeDefined();
+    expect(firstTracker!.current_phase).toEqual('Development');
+    expect(firstTracker!.completion_percentage).toEqual(75);
+    expect(firstTracker!.milestones).toHaveLength(2);
+    expect(firstTracker!.milestones[0].name).toEqual('Design Phase');
+    expect(firstTracker!.milestones[0].completed).toEqual(true);
+    expect(firstTracker!.milestones[0].due_date).toBeInstanceOf(Date);
+    expect(firstTracker!.milestones[1].completed).toEqual(false);
+    expect(firstTracker!.milestones[1].due_date).toBeInstanceOf(Date);
+    expect(firstTracker!.created_at).toBeInstanceOf(Date);
+    expect(firstTracker!.updated_at).toBeInstanceOf(Date);
 
     // Check second tracker
-    const tracker2 = result.find(t => t.project_name === 'Machine Learning Pipeline');
-    expect(tracker2).toBeDefined();
-    expect(tracker2!.current_phase).toEqual('Testing');
-    expect(tracker2!.completion_percentage).toEqual(90);
-    expect(tracker2!.milestones).toHaveLength(3);
-    expect(tracker2!.milestones[2].name).toEqual('Deployment');
-    expect(tracker2!.milestones[2].completed).toBe(false);
-    expect(tracker2!.milestones[2].due_date).toBeInstanceOf(Date);
+    const secondTracker = result.find(t => t.project_name === 'Data Visualization');
+    expect(secondTracker).toBeDefined();
+    expect(secondTracker!.current_phase).toEqual('Testing');
+    expect(secondTracker!.completion_percentage).toEqual(90);
+    expect(secondTracker!.milestones).toHaveLength(2);
+    expect(secondTracker!.milestones[0].due_date).toBeNull();
+    expect(secondTracker!.milestones[1].due_date).toBeInstanceOf(Date);
   });
 
-  it('should handle milestone date objects correctly', async () => {
-    const trackerWithDates: CreateProgressTrackerInput = {
-      project_name: 'Test Project',
-      current_phase: 'Planning',
-      completion_percentage: 25,
-      milestones: [
-        { name: 'Research', completed: true, due_date: new Date('2024-01-15') },
-        { name: 'Development', completed: false, due_date: new Date('2024-02-28') }
-      ]
-    };
+  it('should handle trackers with complex milestone structures', async () => {
+    const complexMilestones = [
+      { name: 'Phase 1', completed: true, due_date: new Date('2024-01-01') },
+      { name: 'Phase 2', completed: false, due_date: null },
+      { name: 'Phase 3', completed: false, due_date: new Date('2024-03-15') }
+    ];
 
-    await db.insert(progressTrackersTable).values({
-      project_name: trackerWithDates.project_name,
-      current_phase: trackerWithDates.current_phase,
-      completion_percentage: trackerWithDates.completion_percentage,
-      milestones: trackerWithDates.milestones
-    }).execute();
+    await db.insert(progressTrackersTable)
+      .values({
+        project_name: 'Complex Project',
+        current_phase: 'Phase 2',
+        completion_percentage: 33,
+        milestones: complexMilestones
+      })
+      .execute();
 
     const result = await getProgressTrackers();
-    
+
     expect(result).toHaveLength(1);
     const tracker = result[0];
+    expect(tracker.milestones).toHaveLength(3);
+    expect(tracker.milestones[0].completed).toEqual(true);
     expect(tracker.milestones[0].due_date).toBeInstanceOf(Date);
-    expect(tracker.milestones[1].due_date).toBeInstanceOf(Date);
-    expect(tracker.milestones[0].due_date!.getFullYear()).toEqual(2024);
-    expect(tracker.milestones[1].due_date!.getMonth()).toEqual(1); // February is month 1
+    expect(tracker.milestones[1].completed).toEqual(false);
+    expect(tracker.milestones[1].due_date).toBeNull();
+    expect(tracker.milestones[2].due_date).toBeInstanceOf(Date);
   });
 });

@@ -11,7 +11,7 @@ export const getCollaborativeSpaces = async (): Promise<CollaborativeSpace[]> =>
 
     return results.map(space => ({
       ...space,
-      // All fields are already in the correct types - no numeric conversions needed
+      // No numeric conversions needed - all fields are already correct types
     }));
   } catch (error) {
     console.error('Failed to fetch collaborative spaces:', error);

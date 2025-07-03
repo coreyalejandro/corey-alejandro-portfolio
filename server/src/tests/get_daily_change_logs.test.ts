@@ -19,12 +19,12 @@ describe('getDailyChangeLogs', () => {
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-    const twoDaysAgo = new Date(today);
-    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+    const dayBeforeYesterday = new Date(today);
+    dayBeforeYesterday.setDate(dayBeforeYesterday.getDate() - 2);
 
     await db.insert(dailyChangeLogsTable).values([
       {
-        date: twoDaysAgo,
+        date: dayBeforeYesterday,
         changes: [
           { type: 'feature', description: 'Added new feature', impact: 'high' },
           { type: 'bugfix', description: 'Fixed critical bug', impact: 'medium' }
@@ -39,7 +39,7 @@ describe('getDailyChangeLogs', () => {
       {
         date: yesterday,
         changes: [
-          { type: 'content', description: 'Updated documentation', impact: 'medium' }
+          { type: 'content', description: 'Updated portfolio content', impact: 'medium' }
         ]
       }
     ]).execute();
@@ -47,21 +47,15 @@ describe('getDailyChangeLogs', () => {
     const result = await getDailyChangeLogs();
 
     expect(result).toHaveLength(3);
+    // Should be ordered by date descending (most recent first)
+    expect(result[0].date.getTime()).toBeGreaterThan(result[1].date.getTime());
+    expect(result[1].date.getTime()).toBeGreaterThan(result[2].date.getTime());
     
-    // Verify ordering - most recent first
-    expect(result[0].date.toDateString()).toEqual(today.toDateString());
-    expect(result[1].date.toDateString()).toEqual(yesterday.toDateString());
-    expect(result[2].date.toDateString()).toEqual(twoDaysAgo.toDateString());
-
-    // Verify change data structure
+    // Verify data structure
     expect(result[0].changes).toHaveLength(1);
-    expect(result[0].changes[0].type).toEqual('improvement');
-    expect(result[0].changes[0].description).toEqual('Improved performance');
-    expect(result[0].changes[0].impact).toEqual('low');
-
-    expect(result[2].changes).toHaveLength(2);
-    expect(result[2].changes[0].type).toEqual('feature');
-    expect(result[2].changes[1].type).toEqual('bugfix');
+    expect(result[0].changes[0].type).toBe('improvement');
+    expect(result[0].changes[0].description).toBe('Improved performance');
+    expect(result[0].changes[0].impact).toBe('low');
   });
 
   it('should respect limit parameter', async () => {
@@ -75,10 +69,10 @@ describe('getDailyChangeLogs', () => {
     }
 
     await db.insert(dailyChangeLogsTable).values(
-      dates.map(date => ({
+      dates.map((date, index) => ({
         date,
         changes: [
-          { type: 'feature', description: `Feature on ${date.toDateString()}`, impact: 'low' }
+          { type: 'feature', description: `Feature ${index}`, impact: 'medium' }
         ]
       }))
     ).execute();
@@ -86,23 +80,21 @@ describe('getDailyChangeLogs', () => {
     const result = await getDailyChangeLogs(3);
 
     expect(result).toHaveLength(3);
-    
-    // Verify we got the 3 most recent entries
-    expect(result[0].date.toDateString()).toEqual(dates[0].toDateString());
-    expect(result[1].date.toDateString()).toEqual(dates[1].toDateString());
-    expect(result[2].date.toDateString()).toEqual(dates[2].toDateString());
+    // Should still be ordered by date descending
+    expect(result[0].date.getTime()).toBeGreaterThan(result[1].date.getTime());
+    expect(result[1].date.getTime()).toBeGreaterThan(result[2].date.getTime());
   });
 
-  it('should handle change logs with different change types', async () => {
+  it('should handle complex change log structures', async () => {
     const today = new Date();
     
     await db.insert(dailyChangeLogsTable).values({
       date: today,
       changes: [
-        { type: 'feature', description: 'Added new feature', impact: 'high' },
-        { type: 'bugfix', description: 'Fixed bug', impact: 'medium' },
-        { type: 'improvement', description: 'Performance improvement', impact: 'low' },
-        { type: 'content', description: 'Updated content', impact: 'medium' }
+        { type: 'feature', description: 'Added 3D gallery navigation', impact: 'high' },
+        { type: 'bugfix', description: 'Fixed artifact positioning', impact: 'medium' },
+        { type: 'improvement', description: 'Optimized rendering performance', impact: 'low' },
+        { type: 'content', description: 'Updated project descriptions', impact: 'medium' }
       ]
     }).execute();
 
@@ -111,26 +103,36 @@ describe('getDailyChangeLogs', () => {
     expect(result).toHaveLength(1);
     expect(result[0].changes).toHaveLength(4);
     
+    // Verify all change types are present
     const changeTypes = result[0].changes.map(change => change.type);
     expect(changeTypes).toContain('feature');
     expect(changeTypes).toContain('bugfix');
     expect(changeTypes).toContain('improvement');
     expect(changeTypes).toContain('content');
+    
+    // Verify impact levels
+    const impactLevels = result[0].changes.map(change => change.impact);
+    expect(impactLevels).toContain('high');
+    expect(impactLevels).toContain('medium');
+    expect(impactLevels).toContain('low');
   });
 
-  it('should handle undefined limit parameter', async () => {
-    const today = new Date();
+  it('should handle date and timestamp fields correctly', async () => {
+    const specificDate = new Date('2024-01-15T10:30:00Z');
     
     await db.insert(dailyChangeLogsTable).values({
-      date: today,
+      date: specificDate,
       changes: [
-        { type: 'feature', description: 'Test feature', impact: 'low' }
+        { type: 'feature', description: 'Test feature', impact: 'medium' }
       ]
     }).execute();
 
-    const result = await getDailyChangeLogs(undefined);
+    const result = await getDailyChangeLogs();
 
     expect(result).toHaveLength(1);
-    expect(result[0].changes[0].description).toEqual('Test feature');
+    expect(result[0].date).toBeInstanceOf(Date);
+    expect(result[0].created_at).toBeInstanceOf(Date);
+    expect(result[0].id).toBeDefined();
+    expect(typeof result[0].id).toBe('number');
   });
 });

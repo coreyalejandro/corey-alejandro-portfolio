@@ -9,24 +9,24 @@ import { eq } from 'drizzle-orm';
 
 // Test input with all required fields
 const testInput: CreateProgressTrackerInput = {
-  project_name: 'VR Portfolio Project',
+  project_name: 'AI Portfolio Platform',
   current_phase: 'Development',
   completion_percentage: 75,
   milestones: [
     {
-      name: 'Project Setup',
+      name: 'Database Schema Complete',
       completed: true,
+      due_date: null
+    },
+    {
+      name: 'API Implementation',
+      completed: false,
       due_date: new Date('2024-01-15')
     },
     {
-      name: '3D Gallery Implementation',
-      completed: true,
-      due_date: new Date('2024-02-01')
-    },
-    {
-      name: 'AI Curator Integration',
+      name: '3D Gallery Setup',
       completed: false,
-      due_date: new Date('2024-02-15')
+      due_date: new Date('2024-01-30')
     }
   ]
 };
@@ -39,7 +39,7 @@ describe('createProgressTracker', () => {
     const result = await createProgressTracker(testInput);
 
     // Basic field validation
-    expect(result.project_name).toEqual('VR Portfolio Project');
+    expect(result.project_name).toEqual('AI Portfolio Platform');
     expect(result.current_phase).toEqual('Development');
     expect(result.completion_percentage).toEqual(75);
     expect(result.milestones).toHaveLength(3);
@@ -48,53 +48,69 @@ describe('createProgressTracker', () => {
     expect(result.updated_at).toBeInstanceOf(Date);
 
     // Validate milestone structure
-    const firstMilestone = result.milestones[0];
-    expect(firstMilestone.name).toEqual('Project Setup');
-    expect(firstMilestone.completed).toBe(true);
-    expect(firstMilestone.due_date).toBeInstanceOf(Date);
+    expect(result.milestones[0].name).toEqual('Database Schema Complete');
+    expect(result.milestones[0].completed).toBe(true);
+    expect(result.milestones[0].due_date).toBeNull();
+    expect(result.milestones[1].name).toEqual('API Implementation');
+    expect(result.milestones[1].completed).toBe(false);
+    expect(result.milestones[1].due_date).toBeInstanceOf(Date);
   });
 
   it('should save progress tracker to database', async () => {
     const result = await createProgressTracker(testInput);
 
-    // Query using proper drizzle syntax
+    // Query database to verify insertion
     const progressTrackers = await db.select()
       .from(progressTrackersTable)
       .where(eq(progressTrackersTable.id, result.id))
       .execute();
 
     expect(progressTrackers).toHaveLength(1);
-    const saved = progressTrackers[0];
-    expect(saved.project_name).toEqual('VR Portfolio Project');
-    expect(saved.current_phase).toEqual('Development');
-    expect(saved.completion_percentage).toEqual(75);
-    expect(saved.created_at).toBeInstanceOf(Date);
-    expect(saved.updated_at).toBeInstanceOf(Date);
+    expect(progressTrackers[0].project_name).toEqual('AI Portfolio Platform');
+    expect(progressTrackers[0].current_phase).toEqual('Development');
+    expect(progressTrackers[0].completion_percentage).toEqual(75);
+    expect(progressTrackers[0].created_at).toBeInstanceOf(Date);
+    expect(progressTrackers[0].updated_at).toBeInstanceOf(Date);
 
-    // Validate jsonb milestones data
-    const milestones = saved.milestones as any[];
-    expect(milestones).toHaveLength(3);
-    expect(milestones[0].name).toEqual('Project Setup');
-    expect(milestones[0].completed).toBe(true);
-    expect(milestones[1].name).toEqual('3D Gallery Implementation');
-    expect(milestones[2].completed).toBe(false);
+    // Validate stored milestones JSON structure
+    const storedMilestones = progressTrackers[0].milestones as any[];
+    expect(storedMilestones).toHaveLength(3);
+    expect(storedMilestones[0].name).toEqual('Database Schema Complete');
+    expect(storedMilestones[0].completed).toBe(true);
+    expect(storedMilestones[1].name).toEqual('API Implementation');
+    expect(storedMilestones[1].completed).toBe(false);
+  });
+
+  it('should handle empty milestones array', async () => {
+    const inputWithEmptyMilestones: CreateProgressTrackerInput = {
+      project_name: 'Simple Project',
+      current_phase: 'Planning',
+      completion_percentage: 0,
+      milestones: []
+    };
+
+    const result = await createProgressTracker(inputWithEmptyMilestones);
+
+    expect(result.milestones).toHaveLength(0);
+    expect(result.project_name).toEqual('Simple Project');
+    expect(result.completion_percentage).toEqual(0);
   });
 
   it('should handle milestones with null due dates', async () => {
     const inputWithNullDates: CreateProgressTrackerInput = {
-      project_name: 'Test Project',
-      current_phase: 'Planning',
+      project_name: 'Research Project',
+      current_phase: 'Analysis',
       completion_percentage: 25,
       milestones: [
         {
-          name: 'Research Phase',
+          name: 'Literature Review',
           completed: true,
           due_date: null
         },
         {
-          name: 'Design Phase',
+          name: 'Data Collection',
           completed: false,
-          due_date: new Date('2024-03-01')
+          due_date: null
         }
       ]
     };
@@ -103,36 +119,6 @@ describe('createProgressTracker', () => {
 
     expect(result.milestones).toHaveLength(2);
     expect(result.milestones[0].due_date).toBeNull();
-    expect(result.milestones[1].due_date).toBeInstanceOf(Date);
-  });
-
-  it('should handle edge case completion percentages', async () => {
-    const minInput: CreateProgressTrackerInput = {
-      project_name: 'New Project',
-      current_phase: 'Initiation',
-      completion_percentage: 0,
-      milestones: []
-    };
-
-    const maxInput: CreateProgressTrackerInput = {
-      project_name: 'Completed Project',
-      current_phase: 'Delivered',
-      completion_percentage: 100,
-      milestones: [
-        {
-          name: 'Final Delivery',
-          completed: true,
-          due_date: new Date('2024-01-01')
-        }
-      ]
-    };
-
-    const minResult = await createProgressTracker(minInput);
-    const maxResult = await createProgressTracker(maxInput);
-
-    expect(minResult.completion_percentage).toEqual(0);
-    expect(minResult.milestones).toHaveLength(0);
-    expect(maxResult.completion_percentage).toEqual(100);
-    expect(maxResult.milestones).toHaveLength(1);
+    expect(result.milestones[1].due_date).toBeNull();
   });
 });

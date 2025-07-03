@@ -11,14 +11,13 @@ export const createProgressTracker = async (input: CreateProgressTrackerInput): 
         project_name: input.project_name,
         current_phase: input.current_phase,
         completion_percentage: input.completion_percentage,
-        milestones: input.milestones // jsonb column - no conversion needed
+        milestones: input.milestones
       })
       .returning()
       .execute();
 
+    // Return the created progress tracker with proper date conversion
     const progressTracker = result[0];
-    
-    // Convert milestone due_date strings back to Date objects
     const milestones = (progressTracker.milestones as any[]).map(milestone => ({
       ...milestone,
       due_date: milestone.due_date ? new Date(milestone.due_date) : null

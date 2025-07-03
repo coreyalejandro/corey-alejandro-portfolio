@@ -1,703 +1,1294 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { trpc } from '@/utils/trpc';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger 
+} from '@/components/ui/dialog';
+import { 
+  Mic, 
+  MicOff, 
+  Eye, 
+  Palette, 
+  Bot, 
+  Users, 
+  TrendingUp, 
+  FileText, 
   Play, 
-  Volume2, 
-  VolumeX, 
-  Maximize2, 
-  Minimize2, 
-  ArrowRight, 
-  Eye,
-  Headphones,
-  Sparkles,
+  Pause, 
   Zap,
-  Globe,
-  Users,
+  Sparkles,
+  Star,
+  Github,
+  ExternalLink,
   Calendar,
-  TrendingUp,
-  Bot,
+  Clock,
+  Target,
+  Activity,
   Camera,
-  Mic,
-  MicOff,
-  MousePointer
+  Navigation,
+  Layers,
+  Monitor,
+  Keyboard,
+  Accessibility,
+  Shield,
+  Heart,
+  Coffee,
+  Contrast,
+  Type,
+  Wind,
+  TreePine,
+  Leaf,
+  AlertTriangle
 } from 'lucide-react';
 
-// Import type definitions
+// Import types
 import type { 
   User, 
   PortfolioArtifact, 
   ProgressTracker,
   DailyChangeLog,
-  CollaborativeSpace
+  AiCuratorInteraction,
+  CollaborativeSpace,
+  CreateAiCuratorInteractionInput
 } from '../../server/src/schema';
 
+// Default fallback data for demonstration
+const defaultUser: User = {
+  id: 1,
+  name: "Corey Alejandro",
+  title: "AI & Data Engineer",
+  bio: "Passionate about creating intelligent systems and beautiful data visualizations with a focus on accessibility and neurodivergent-friendly design.",
+  avatar_url: null,
+  created_at: new Date(),
+  updated_at: new Date()
+};
+
+const defaultFeaturedArtifacts: PortfolioArtifact[] = [
+  {
+    id: 1,
+    title: "Neural Network Visualization Engine",
+    description: "Interactive 3D visualization tool for neural network architectures with real-time training progress.",
+    category: "ai_project" as const,
+    tags: ["AI", "Visualization", "Three.js", "Neural Networks"],
+    thumbnail_url: null,
+    model_url: null,
+    demo_url: "https://demo.example.com",
+    github_url: "https://github.com/corey/neural-viz",
+    position_x: 0,
+    position_y: 0,
+    position_z: 0,
+    rotation_x: 0,
+    rotation_y: 0,
+    rotation_z: 0,
+    scale: 1,
+    is_featured: true,
+    created_at: new Date(),
+    updated_at: new Date()
+  },
+  {
+    id: 2,
+    title: "Accessible Data Dashboard",
+    description: "Screen reader compatible dashboard with voice navigation and high contrast mode for data analytics.",
+    category: "visualization" as const,
+    tags: ["Accessibility", "Dashboard", "Data Viz", "WCAG"],
+    thumbnail_url: null,
+    model_url: null,
+    demo_url: "https://demo.example.com",
+    github_url: "https://github.com/corey/accessible-dash",
+    position_x: 2,
+    position_y: 1,
+    position_z: -1,
+    rotation_x: 0,
+    rotation_y: 45,
+    rotation_z: 0,
+    scale: 1,
+    is_featured: true,
+    created_at: new Date(),
+    updated_at: new Date()
+  },
+  {
+    id: 3,
+    title: "Collaborative ML Pipeline",
+    description: "Real-time collaborative machine learning pipeline with trauma-informed design principles.",
+    category: "collaboration" as const,
+    tags: ["Machine Learning", "Collaboration", "Pipeline", "Trauma-Informed"],
+    thumbnail_url: null,
+    model_url: null,
+    demo_url: "https://demo.example.com",
+    github_url: "https://github.com/corey/ml-collab",
+    position_x: -2,
+    position_y: 0,
+    position_z: 1,
+    rotation_x: 0,
+    rotation_y: -30,
+    rotation_z: 0,
+    scale: 1,
+    is_featured: true,
+    created_at: new Date(),
+    updated_at: new Date()
+  }
+];
+
+const defaultProgressTrackers: ProgressTracker[] = [
+  {
+    id: 1,
+    project_name: "3D Portfolio Gallery",
+    current_phase: "Frontend Development",
+    completion_percentage: 85,
+    milestones: [
+      { name: "Initial Setup", completed: true, due_date: new Date("2024-01-15") },
+      { name: "3D Engine Integration", completed: true, due_date: new Date("2024-02-01") },
+      { name: "Accessibility Features", completed: true, due_date: new Date("2024-02-15") },
+      { name: "AI Curator Integration", completed: false, due_date: new Date("2024-03-01") },
+      { name: "Testing & Optimization", completed: false, due_date: new Date("2024-03-15") }
+    ],
+    created_at: new Date(),
+    updated_at: new Date()
+  }
+];
+
+const defaultChangeLogs: DailyChangeLog[] = [
+  {
+    id: 1,
+    date: new Date(),
+    changes: [
+      {
+        type: "feature" as const,
+        description: "Added Studio Ghibli-inspired design system with gentle animations",
+        impact: "medium" as const
+      },
+      {
+        type: "improvement" as const,
+        description: "Enhanced accessibility features with better keyboard navigation",
+        impact: "high" as const
+      },
+      {
+        type: "bugfix" as const,
+        description: "Fixed voice recognition compatibility across different browsers",
+        impact: "low" as const
+      }
+    ],
+    created_at: new Date()
+  }
+];
+
+const defaultCollaborativeSpaces: CollaborativeSpace[] = [
+  {
+    id: 1,
+    name: "Design Review Room",
+    description: "A safe space for collaborative design reviews with trauma-informed facilitation.",
+    space_type: "meeting_room" as const,
+    max_participants: 8,
+    is_active: true,
+    created_at: new Date(),
+    updated_at: new Date()
+  },
+  {
+    id: 2,
+    name: "Feedback Garden",
+    description: "Gentle feedback environment inspired by Studio Ghibli aesthetics.",
+    space_type: "feedback_space" as const,
+    max_participants: 12,
+    is_active: true,
+    created_at: new Date(),
+    updated_at: new Date()
+  }
+];
+
+// Speech Recognition interface
+interface SpeechRecognition extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  start(): void;
+  stop(): void;
+  onresult: (event: SpeechRecognitionEvent) => void;
+  onerror: (event: SpeechRecognitionErrorEvent) => void;
+}
+
+interface SpeechRecognitionEvent extends Event {
+  results: SpeechRecognitionResultList;
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+  error: string;
+}
+
+interface SpeechRecognitionResultList {
+  [index: number]: SpeechRecognitionResult;
+  length: number;
+}
+
+interface SpeechRecognitionResult {
+  [index: number]: SpeechRecognitionAlternative;
+  length: number;
+}
+
+interface SpeechRecognitionAlternative {
+  transcript: string;
+  confidence: number;
+}
+
+interface WindowWithSpeechRecognition extends Window {
+  webkitSpeechRecognition: new () => SpeechRecognition;
+}
+
+// Accessibility and neurodivergent-friendly settings
+interface AccessibilitySettings {
+  highContrast: boolean;
+  reducedMotion: boolean;
+  voiceEnabled: boolean;
+  soundEnabled: boolean;
+  largeText: boolean;
+  focusRing: boolean;
+  predictableUI: boolean;
+  clearInstructions: boolean;
+}
+
+// 3D Gallery State
+interface GalleryState {
+  isActive: boolean;
+  selectedArtifact: PortfolioArtifact | null;
+  cameraPosition: { x: number; y: number; z: number };
+  cameraRotation: { x: number; y: number; z: number };
+  isTransitioning: boolean;
+  tourMode: boolean;
+  tourStep: number;
+}
+
+// AI Curator State
+interface CuratorState {
+  isActive: boolean;
+  isListening: boolean;
+  isSpeaking: boolean;
+  currentSession: string;
+  interactions: AiCuratorInteraction[];
+  context: PortfolioArtifact | null;
+  mood: 'helpful' | 'excited' | 'thoughtful' | 'curious';
+}
+
 function App() {
-  // User profile state
+  // Core data state
   const [user, setUser] = useState<User | null>(null);
-  
-  // Portfolio artifacts state
   const [featuredArtifacts, setFeaturedArtifacts] = useState<PortfolioArtifact[]>([]);
-  
-  // Progress and change log state
   const [progressTrackers, setProgressTrackers] = useState<ProgressTracker[]>([]);
   const [changeLogs, setChangeLogs] = useState<DailyChangeLog[]>([]);
-  
-  // Collaborative spaces state
   const [collaborativeSpaces, setCollaborativeSpaces] = useState<CollaborativeSpace[]>([]);
   
   // UI state
+  const [activeTab, setActiveTab] = useState<string>('gallery');
   const [isLoading, setIsLoading] = useState(true);
-  const [currentView, setCurrentView] = useState<'gallery' | 'curator' | 'progress' | 'collaboration'>('gallery');
-  const [isVoiceActive, setIsVoiceActive] = useState(false);
-  const [isCinematicMode, setIsCinematicMode] = useState(false);
-  const [isAccessibilityMode, setIsAccessibilityMode] = useState(false);
+  const [usingFallbackData, setUsingFallbackData] = useState(false);
+  
+  // Accessibility settings
+  const [accessibilitySettings, setAccessibilitySettings] = useState<AccessibilitySettings>({
+    highContrast: false,
+    reducedMotion: false,
+    voiceEnabled: true,
+    soundEnabled: true,
+    largeText: false,
+    focusRing: true,
+    predictableUI: true,
+    clearInstructions: true
+  });
+  
+  // 3D Gallery state
+  const [galleryState, setGalleryState] = useState<GalleryState>({
+    isActive: false,
+    selectedArtifact: null,
+    cameraPosition: { x: 0, y: 0, z: 5 },
+    cameraRotation: { x: 0, y: 0, z: 0 },
+    isTransitioning: false,
+    tourMode: false,
+    tourStep: 0
+  });
   
   // AI Curator state
-  const [curatorMessage, setCuratorMessage] = useState('');
-  const [isListening, setIsListening] = useState(false);
+  const [curatorState, setCuratorState] = useState<CuratorState>({
+    isActive: false,
+    isListening: false,
+    isSpeaking: false,
+    currentSession: '',
+    interactions: [],
+    context: null,
+    mood: 'helpful'
+  });
   
-  // Load initial data
-  const loadUserProfile = useCallback(async () => {
-    try {
-      const userProfile = await trpc.getUserProfile.query();
-      setUser(userProfile);
-    } catch (error) {
-      console.error('Failed to load user profile:', error);
-    }
-  }, []);
+  // Form state for interactions
+  const [curatorInput, setCuratorInput] = useState<string>('');
   
-  const loadDesignTheme = useCallback(async () => {
-    try {
-      const theme = await trpc.getActiveDesignTheme.query();
-      // Theme is loaded but not used in current implementation
-      if (theme) {
-        console.log('Design theme loaded:', theme.name);
-      }
-    } catch (error) {
-      console.error('Failed to load design theme:', error);
-    }
-  }, []);
+  // Refs for 3D
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   
-  const loadPortfolioData = useCallback(async () => {
+  // Load initial data with fallback to default data
+  const loadData = useCallback(async () => {
     try {
-      const [allArtifacts, featured, trackers, logs, spaces] = await Promise.all([
-        trpc.getPortfolioArtifacts.query(),
+      setIsLoading(true);
+      setUsingFallbackData(false);
+      
+      const [
+        userProfile,
+        featuredItems,
+        progressData,
+        changeLogData,
+        collaborativeData
+      ] = await Promise.all([
+        trpc.getUserProfile.query(),
         trpc.getFeaturedArtifacts.query(),
         trpc.getProgressTrackers.query(),
         trpc.getDailyChangeLogs.query(),
         trpc.getCollaborativeSpaces.query()
       ]);
       
-      // Store all artifacts but only use featured for now
-      console.log('All artifacts loaded:', allArtifacts.length);
-      setFeaturedArtifacts(featured);
-      setProgressTrackers(trackers);
-      setChangeLogs(logs);
-      setCollaborativeSpaces(spaces);
-    } catch (error) {
-      console.error('Failed to load portfolio data:', error);
+      setUser(userProfile);
+      setFeaturedArtifacts(featuredItems);
+      setProgressTrackers(progressData);
+      setChangeLogs(changeLogData);
+      setCollaborativeSpaces(collaborativeData);
+      
+      // Initialize curator session
+      setCuratorState(prev => ({
+        ...prev,
+        currentSession: `session_${Date.now()}`
+      }));
+      
+      console.log('Data loaded successfully from backend');
+      
+    } catch (err) {
+      console.error('Backend unavailable, using fallback data for frontend demonstration:', err);
+      
+      // Use fallback data to demonstrate frontend functionality
+      setUsingFallbackData(true);
+      setUser(defaultUser);
+      setFeaturedArtifacts(defaultFeaturedArtifacts);
+      setProgressTrackers(defaultProgressTrackers);
+      setChangeLogs(defaultChangeLogs);
+      setCollaborativeSpaces(defaultCollaborativeSpaces);
+      
+      // Initialize curator session
+      setCuratorState(prev => ({
+        ...prev,
+        currentSession: `session_${Date.now()}`
+      }));
+    } finally {
+      setIsLoading(false);
     }
   }, []);
   
-  const loadAllData = useCallback(async () => {
-    setIsLoading(true);
-    await Promise.all([
-      loadUserProfile(),
-      loadDesignTheme(),
-      loadPortfolioData()
-    ]);
-    setIsLoading(false);
-  }, [loadUserProfile, loadDesignTheme, loadPortfolioData]);
-  
   useEffect(() => {
-    loadAllData();
-  }, [loadAllData]);
+    loadData();
+  }, [loadData]);
   
-  // Voice control handlers
-  const toggleVoiceControl = useCallback(() => {
-    setIsVoiceActive(!isVoiceActive);
-    if (!isVoiceActive) {
-      // Start voice recognition
-      setIsListening(true);
-      setCuratorMessage('🎙️ Voice controls activated. Say "help" for commands.');
-    } else {
-      // Stop voice recognition
-      setIsListening(false);
-      setCuratorMessage('');
+  // Voice recognition setup
+  useEffect(() => {
+    if (accessibilitySettings.voiceEnabled && 'webkitSpeechRecognition' in window) {
+      const windowWithSpeech = window as WindowWithSpeechRecognition;
+      const recognition = new windowWithSpeech.webkitSpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+      
+      recognition.onresult = (event: SpeechRecognitionEvent) => {
+        const transcript = Array.from(event.results)
+          .map((result: SpeechRecognitionResult) => result[0])
+          .map((result: SpeechRecognitionAlternative) => result.transcript)
+          .join('');
+        
+        console.log('Voice input received:', transcript);
+      };
+      
+      recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+        console.error('Speech recognition error:', event.error);
+      };
+      
+      return () => {
+        recognition.stop();
+      };
     }
-  }, [isVoiceActive]);
+  }, [accessibilitySettings.voiceEnabled]);
   
-  const toggleCinematicMode = useCallback(() => {
-    setIsCinematicMode(!isCinematicMode);
-  }, [isCinematicMode]);
-  
-  const toggleAccessibilityMode = useCallback(() => {
-    setIsAccessibilityMode(!isAccessibilityMode);
-  }, [isAccessibilityMode]);
-  
-  // Keyboard navigation
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.ctrlKey || event.metaKey) {
-        switch (event.key) {
-          case '1':
-            event.preventDefault();
-            setCurrentView('gallery');
-            break;
-          case '2':
-            event.preventDefault();
-            setCurrentView('curator');
-            break;
-          case '3':
-            event.preventDefault();
-            setCurrentView('progress');
-            break;
-          case '4':
-            event.preventDefault();
-            setCurrentView('collaboration');
-            break;
-          case 'v':
-            event.preventDefault();
-            toggleVoiceControl();
-            break;
-          case 'c':
-            event.preventDefault();
-            toggleCinematicMode();
-            break;
-          case 'a':
-            event.preventDefault();
-            toggleAccessibilityMode();
-            break;
+  // AI Curator interaction handler
+  const handleCuratorInteraction = async (input: string, type: 'voice' | 'text' | 'gesture') => {
+    if (!input.trim()) return;
+    
+    setCuratorState(prev => ({ ...prev, isSpeaking: true }));
+    
+    try {
+      if (usingFallbackData) {
+        // Fallback curator response for frontend demonstration
+        const fallbackResponse = {
+          curator_response: `Thank you for asking "${input}". I'm currently in demonstration mode with fallback data. This shows how the AI curator would respond to your questions about Corey's projects with gentle, helpful guidance.`,
+          id: Date.now(),
+          session_id: curatorState.currentSession,
+          user_input: input,
+          interaction_type: type,
+          context_artifact_id: curatorState.context?.id || null,
+          created_at: new Date()
+        };
+        
+        // Simulate processing time
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        setCuratorState(prev => ({
+          ...prev,
+          interactions: [...prev.interactions, fallbackResponse],
+          isSpeaking: false
+        }));
+        
+        // Text-to-speech for response
+        if (accessibilitySettings.soundEnabled && 'speechSynthesis' in window) {
+          const utterance = new SpeechSynthesisUtterance(fallbackResponse.curator_response);
+          utterance.rate = 0.8;
+          utterance.pitch = 1.1;
+          speechSynthesis.speak(utterance);
+        }
+      } else {
+        // Real backend interaction
+        const interactionData: CreateAiCuratorInteractionInput = {
+          session_id: curatorState.currentSession,
+          user_input: input,
+          interaction_type: type,
+          context_artifact_id: curatorState.context?.id || null
+        };
+        
+        const response = await trpc.createAiCuratorInteraction.mutate(interactionData);
+        const updatedInteractions = await trpc.getAiCuratorInteractions.query(curatorState.currentSession);
+        
+        setCuratorState(prev => ({
+          ...prev,
+          interactions: updatedInteractions,
+          isSpeaking: false
+        }));
+        
+        if (accessibilitySettings.soundEnabled && 'speechSynthesis' in window) {
+          const utterance = new SpeechSynthesisUtterance(response.curator_response);
+          utterance.rate = 0.8;
+          utterance.pitch = 1.1;
+          speechSynthesis.speak(utterance);
         }
       }
-    };
+    } catch (err) {
+      console.error('Failed to process curator interaction:', err);
+      setCuratorState(prev => ({ ...prev, isSpeaking: false }));
+    }
     
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [toggleVoiceControl, toggleCinematicMode, toggleAccessibilityMode]);
+    setCuratorInput('');
+  };
+  
+  // 3D Gallery navigation
+  const navigateToArtifact = (artifact: PortfolioArtifact) => {
+    setGalleryState(prev => ({
+      ...prev,
+      isTransitioning: true,
+      selectedArtifact: artifact,
+      cameraPosition: {
+        x: artifact.position_x,
+        y: artifact.position_y,
+        z: artifact.position_z + 2
+      }
+    }));
+    
+    // Update curator context
+    setCuratorState(prev => ({
+      ...prev,
+      context: artifact
+    }));
+    
+    // Simulate transition completion
+    setTimeout(() => {
+      setGalleryState(prev => ({
+        ...prev,
+        isTransitioning: false
+      }));
+    }, 1000);
+  };
+  
+  // Start gallery tour
+  const startGalleryTour = () => {
+    if (featuredArtifacts.length === 0) return;
+    
+    setGalleryState(prev => ({
+      ...prev,
+      tourMode: true,
+      tourStep: 0
+    }));
+    
+    navigateToArtifact(featuredArtifacts[0]);
+  };
+  
+  // Accessibility setting handlers
+  const toggleAccessibilitySetting = (setting: keyof AccessibilitySettings) => {
+    setAccessibilitySettings(prev => ({
+      ...prev,
+      [setting]: !prev[setting]
+    }));
+  };
+  
+  // Dynamic CSS classes based on accessibility settings
+  const getAccessibilityClasses = () => {
+    return [
+      accessibilitySettings.highContrast ? 'contrast-150' : '',
+      accessibilitySettings.reducedMotion ? 'motion-reduce' : '',
+      accessibilitySettings.largeText ? 'text-lg' : '',
+      accessibilitySettings.focusRing ? 'focus-visible:ring-2 focus-visible:ring-offset-2' : ''
+    ].filter(Boolean).join(' ');
+  };
   
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center space-y-4">
-          <div className="relative">
-            <div className="w-16 h-16 border-4 border-purple-200 border-t-purple-500 rounded-full animate-spin"></div>
-            <Sparkles className="absolute top-4 left-4 w-8 h-8 text-purple-400 animate-pulse" />
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="text-lg font-medium text-slate-600">Loading Portfolio...</p>
+          <div className="flex items-center justify-center space-x-2 text-sm text-slate-500">
+            <Sparkles className="h-4 w-4 animate-pulse" />
+            <span>Initializing 3D Gallery</span>
           </div>
-          <p className="text-purple-200 text-lg font-medium">Loading Corey's Portfolio...</p>
-          <p className="text-purple-400 text-sm">Initializing 3D gallery and AI curator</p>
         </div>
       </div>
     );
   }
   
   return (
-    <div className={`min-h-screen transition-all duration-500 ${
-      isCinematicMode 
-        ? 'bg-black' 
-        : 'bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900'
-    } ${isAccessibilityMode ? 'contrast-125' : ''}`}>
+    <div className={`min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 ${getAccessibilityClasses()}`}>
+      {/* Fallback Data Banner */}
+      {usingFallbackData && (
+        <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-2 text-center text-sm font-medium">
+          <div className="flex items-center justify-center space-x-2">
+            <AlertTriangle className="h-4 w-4" />
+            <span>Demo Mode: Displaying fallback data for frontend demonstration</span>
+            <Sparkles className="h-4 w-4" />
+          </div>
+        </div>
+      )}
       
       {/* Header */}
-      <header className="border-b border-purple-800/30 bg-black/20 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Profile Section */}
+      <header className="bg-white/80 backdrop-blur-sm border-b border-slate-200 sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <Avatar className="h-10 w-10 border-2 border-purple-500/50">
-                <AvatarImage src={user?.avatar_url || undefined} alt={user?.name} />
-                <AvatarFallback className="bg-purple-600 text-white">
+              <Avatar className="h-12 w-12 ring-2 ring-blue-500/20">
+                <AvatarImage src={user?.avatar_url || ''} alt={user?.name || ''} />
+                <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
                   {user?.name?.split(' ').map(n => n[0]).join('') || 'CA'}
                 </AvatarFallback>
               </Avatar>
               <div>
-                <h1 className="text-xl font-bold text-white">{user?.name}</h1>
-                <p className="text-purple-300 text-sm">{user?.title}</p>
+                <h1 className="text-xl font-bold text-slate-800 flex items-center">
+                  {user?.name || 'Corey Alejandro'}
+                  <Sparkles className="h-4 w-4 ml-2 text-yellow-500" />
+                </h1>
+                <p className="text-slate-600 text-sm">{user?.title || 'AI & Data Engineer'}</p>
               </div>
             </div>
             
-            {/* Controls */}
             <div className="flex items-center space-x-2">
+              {/* AI Curator Toggle */}
               <Button
-                variant={isVoiceActive ? "default" : "outline"}
+                variant={curatorState.isActive ? 'default' : 'outline'}
                 size="sm"
-                onClick={toggleVoiceControl}
-                className="border-purple-500/50 text-purple-300 hover:bg-purple-600"
-                aria-label="Toggle voice controls"
+                onClick={() => setCuratorState(prev => ({ ...prev, isActive: !prev.isActive }))}
+                className="hidden md:flex"
               >
-                {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                <Bot className="h-4 w-4 mr-2" />
+                AI Curator
               </Button>
               
+              {/* Voice Control */}
               <Button
-                variant={isCinematicMode ? "default" : "outline"}
+                variant={curatorState.isListening ? 'default' : 'outline'}
                 size="sm"
-                onClick={toggleCinematicMode}
-                className="border-purple-500/50 text-purple-300 hover:bg-purple-600"
-                aria-label="Toggle cinematic mode"
+                onClick={() => setCuratorState(prev => ({ ...prev, isListening: !prev.isListening }))}
+                disabled={!accessibilitySettings.voiceEnabled}
               >
-                {isCinematicMode ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                {curatorState.isListening ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
               </Button>
               
-              <Button
-                variant={isAccessibilityMode ? "default" : "outline"}
-                size="sm"
-                onClick={toggleAccessibilityMode}
-                className="border-purple-500/50 text-purple-300 hover:bg-purple-600"
-                aria-label="Toggle accessibility mode"
-              >
-                <Eye className="h-4 w-4" />
-              </Button>
+              {/* Accessibility Settings */}
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Accessibility className="h-4 w-4" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Accessibility Settings</DialogTitle>
+                    <DialogDescription>
+                      Customize your experience for better accessibility and comfort.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    {Object.entries(accessibilitySettings).map(([key, value]) => (
+                      <div key={key} className="flex items-center justify-between">
+                        <Label htmlFor={key} className="capitalize">
+                          {key.replace(/([A-Z])/g, ' $1').trim()}
+                        </Label>
+                        <Switch
+                          id={key}
+                          checked={value}
+                          onCheckedChange={() => toggleAccessibilitySetting(key as keyof AccessibilitySettings)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
         </div>
       </header>
       
-      {/* Voice Control Status */}
-      {isVoiceActive && (
-        <Alert className="mx-4 mt-4 border-purple-500/50 bg-purple-900/20 text-purple-200">
-          <Bot className="h-4 w-4" />
-          <AlertDescription>
-            {curatorMessage || 'Voice controls active. Say "help" for commands, "navigate gallery" to explore, or "show progress" to see project status.'}
-          </AlertDescription>
-        </Alert>
-      )}
-      
-      {/* Navigation */}
-      <nav className="border-b border-purple-800/30 bg-black/10 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Tabs value={currentView} onValueChange={(value) => setCurrentView(value as typeof currentView)}>
-            <TabsList className="grid w-full grid-cols-4 bg-transparent border-none">
-              <TabsTrigger 
-                value="gallery" 
-                className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-purple-300 hover:bg-purple-800/50"
-              >
-                <Camera className="h-4 w-4 mr-2" />
-                3D Gallery
-              </TabsTrigger>
-              <TabsTrigger 
-                value="curator"
-                className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-purple-300 hover:bg-purple-800/50"
-              >
-                <Bot className="h-4 w-4 mr-2" />
-                AI Curator
-              </TabsTrigger>
-              <TabsTrigger 
-                value="progress"
-                className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-purple-300 hover:bg-purple-800/50"
-              >
-                <TrendingUp className="h-4 w-4 mr-2" />
-                Progress
-              </TabsTrigger>
-              <TabsTrigger 
-                value="collaboration"
-                className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-purple-300 hover:bg-purple-800/50"
-              >
-                <Users className="h-4 w-4 mr-2" />
-                Collaborate
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-      </nav>
-      
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {currentView === 'gallery' && (
-          <div className="space-y-8">
-            {/* 3D Gallery Header */}
-            <div className="text-center space-y-4">
-              <h2 className="text-4xl font-bold text-white mb-4">
-                ✨ Immersive Portfolio Gallery
+      <main className="container mx-auto px-4 py-8">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-6 mb-8">
+            <TabsTrigger value="gallery" className="flex items-center">
+              <Layers className="h-4 w-4 mr-2" />
+              3D Gallery
+            </TabsTrigger>
+            <TabsTrigger value="curator" className="flex items-center">
+              <Bot className="h-4 w-4 mr-2" />
+              AI Curator
+            </TabsTrigger>
+            <TabsTrigger value="collaborate" className="flex items-center">
+              <Users className="h-4 w-4 mr-2" />
+              Collaborate
+            </TabsTrigger>
+            <TabsTrigger value="progress" className="flex items-center">
+              <TrendingUp className="h-4 w-4 mr-2" />
+              Progress
+            </TabsTrigger>
+            <TabsTrigger value="changelog" className="flex items-center">
+              <FileText className="h-4 w-4 mr-2" />
+              Changes
+            </TabsTrigger>
+            <TabsTrigger value="about" className="flex items-center">
+              <Heart className="h-4 w-4 mr-2" />
+              About
+            </TabsTrigger>
+          </TabsList>
+          
+          {/* 3D Gallery Tab */}
+          <TabsContent value="gallery" className="space-y-6">
+            <div className="text-center space-y-4 mb-8">
+              <h2 className="text-3xl font-bold text-slate-800 flex items-center justify-center">
+                <Sparkles className="h-8 w-8 mr-3 text-yellow-500" />
+                Immersive 3D Portfolio Gallery
+                <Wind className="h-8 w-8 ml-3 text-blue-500" />
               </h2>
-              <p className="text-purple-300 text-lg max-w-2xl mx-auto">
-                Explore Corey's work through an interactive 3D space. Each artifact tells a story of innovation in AI and data engineering.
+              <p className="text-slate-600 max-w-2xl mx-auto">
+                Explore my work in a cinematic 3D environment. Use voice commands or the AI curator 
+                to navigate through projects with smooth camera transitions.
               </p>
-            </div>
-            
-            {/* Featured Artifacts */}
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h3 className="text-2xl font-semibold text-white flex items-center">
-                  <Sparkles className="h-6 w-6 mr-2 text-purple-400" />
-                  Featured Projects
-                </h3>
-                <Button 
-                  variant="outline" 
-                  className="border-purple-500/50 text-purple-300 hover:bg-purple-600"
-                >
+              
+              <div className="flex flex-wrap justify-center gap-4">
+                <Button onClick={startGalleryTour} className="bg-gradient-to-r from-blue-500 to-indigo-600">
                   <Play className="h-4 w-4 mr-2" />
-                  Start 3D Tour
+                  Start Guided Tour
+                </Button>
+                <Button variant="outline" onClick={() => setGalleryState(prev => ({ ...prev, isActive: !prev.isActive }))}>
+                  <Camera className="h-4 w-4 mr-2" />
+                  {galleryState.isActive ? 'Exit Gallery' : 'Enter Gallery'}
                 </Button>
               </div>
+            </div>
+            
+            {/* 3D Gallery Canvas */}
+            <div className="relative bg-gradient-to-br from-slate-900 to-indigo-900 rounded-xl overflow-hidden shadow-2xl">
+              <canvas
+                ref={canvasRef}
+                className="w-full h-96 md:h-[600px]"
+                style={{
+                  background: 'radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.1) 0%, rgba(15, 23, 42, 0.8) 100%)'
+                }}
+              />
               
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {featuredArtifacts.length > 0 ? (
-                  featuredArtifacts.map((artifact: PortfolioArtifact) => (
-                    <Card key={artifact.id} className="bg-black/30 border-purple-500/50 hover:border-purple-400 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/20">
-                      <CardHeader>
-                        <div className="flex items-center justify-between">
-                          <Badge 
-                            variant="secondary" 
-                            className="bg-purple-600 text-white capitalize"
-                          >
-                            {artifact.category.replace('_', ' ')}
-                          </Badge>
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
-                            className="text-purple-300 hover:text-white"
-                            onClick={() => console.log('View artifact:', artifact.id)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        <CardTitle className="text-white">{artifact.title}</CardTitle>
-                        <CardDescription className="text-purple-300">
-                          {artifact.description}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex flex-wrap gap-2 mb-4">
-                          {artifact.tags.map((tag: string) => (
-                            <Badge key={tag} variant="outline" className="text-xs border-purple-500/50 text-purple-300">
-                              {tag}
-                            </Badge>
-                          ))}
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          {artifact.demo_url && (
-                            <Button size="sm" variant="outline" className="border-purple-500/50 text-purple-300 hover:bg-purple-600">
-                              <Globe className="h-4 w-4 mr-2" />
-                              Demo
-                            </Button>
-                          )}
-                          {artifact.github_url && (
-                            <Button size="sm" variant="outline" className="border-purple-500/50 text-purple-300 hover:bg-purple-600">
-                              <ArrowRight className="h-4 w-4 mr-2" />
-                              Code
-                            </Button>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
-                ) : (
-                  <div className="col-span-full text-center py-12">
-                    <div className="text-purple-300 space-y-4">
-                      <div className="relative inline-block">
-                        <div className="w-16 h-16 border-2 border-purple-500/30 rounded-full animate-pulse"></div>
-                        <Sparkles className="absolute top-4 left-4 w-8 h-8 text-purple-400 animate-bounce" />
-                      </div>
-                      <p className="text-lg">🎨 Gallery is being curated...</p>
-                      <p className="text-sm text-purple-400">Corey's amazing projects will appear here soon!</p>
+              {/* Gallery overlay with Studio Ghibli aesthetic */}
+              <div className="absolute inset-0 pointer-events-none">
+                <div className="absolute top-4 left-4 bg-white/10 backdrop-blur-sm rounded-lg p-3 text-white">
+                  <div className="flex items-center space-x-2 text-sm">
+                    <Navigation className="h-4 w-4" />
+                    <span>Use WASD keys to navigate</span>
+                  </div>
+                </div>
+                
+                {/* Floating particles for Ghibli aesthetic */}
+                <div className="absolute inset-0 overflow-hidden">
+                  {[...Array(12)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="absolute w-2 h-2 bg-yellow-300/30 rounded-full animate-pulse"
+                      style={{
+                        left: `${Math.random() * 100}%`,
+                        top: `${Math.random() * 100}%`,
+                        animationDelay: `${Math.random() * 3}s`,
+                        animationDuration: `${2 + Math.random() * 3}s`
+                      }}
+                    />
+                  ))}
+                </div>
+                
+                {/* Tron-like grid overlay */}
+                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-purple-500/5">
+                  <div className="absolute inset-0 bg-[linear-gradient(rgba(0,255,255,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(0,255,255,0.1)_1px,transparent_1px)] bg-[size:50px_50px]" />
+                </div>
+                
+                {galleryState.selectedArtifact && (
+                  <div className="absolute bottom-4 left-4 right-4 bg-white/10 backdrop-blur-sm rounded-lg p-4 text-white border border-cyan-500/20">
+                    <h3 className="font-bold text-lg mb-2">{galleryState.selectedArtifact.title}</h3>
+                    <p className="text-sm opacity-90 mb-3">{galleryState.selectedArtifact.description}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {galleryState.selectedArtifact.tags.map((tag: string, index: number) => (
+                        <Badge key={index} variant="secondary" className="bg-white/20 text-white border-cyan-400/50">
+                          {tag}
+                        </Badge>
+                      ))}
                     </div>
                   </div>
                 )}
               </div>
             </div>
             
-            {/* 3D Space Placeholder */}
-            <div className="bg-black/40 border border-purple-500/50 rounded-lg p-8 text-center">
-              <div className="space-y-4">
-                <div className="w-24 h-24 mx-auto bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                  <MousePointer className="h-12 w-12 text-white animate-pulse" />
-                </div>
-                <h3 className="text-xl font-semibold text-white">3D Interactive Space</h3>
-                <p className="text-purple-300 max-w-md mx-auto">
-                  This space will host the immersive 3D gallery where you can navigate through Corey's portfolio artifacts in a cinematic environment.
-                </p>
-                <div className="flex justify-center space-x-4 mt-6">
-                  <Button variant="outline" className="border-purple-500/50 text-purple-300 hover:bg-purple-600">
-                    <Camera className="h-4 w-4 mr-2" />
-                    Enter 3D Mode
-                  </Button>
-                  <Button variant="outline" className="border-purple-500/50 text-purple-300 hover:bg-purple-600">
-                    <Headphones className="h-4 w-4 mr-2" />
-                    Audio Guide
-                  </Button>
-                </div>
-              </div>
+            {/* Featured Artifacts Grid */}
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {featuredArtifacts.map((artifact: PortfolioArtifact) => (
+                <Card 
+                  key={artifact.id} 
+                  className="group hover:shadow-lg transition-all duration-300 cursor-pointer transform hover:scale-105 border-l-4 border-l-blue-500/50"
+                  onClick={() => navigateToArtifact(artifact)}
+                >
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center text-lg">
+                        <Star className="h-5 w-5 mr-2 text-yellow-500" />
+                        {artifact.title}
+                      </CardTitle>
+                      <Badge variant="outline" className="bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-300">
+                        {artifact.category.replace('_', ' ')}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <CardDescription className="mb-4">
+                      {artifact.description}
+                    </CardDescription>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {artifact.tags.map((tag: string, index: number) => (
+                        <Badge key={index} variant="secondary" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                    <div className="flex items-center space-x-4 text-sm text-slate-500">
+                      {artifact.github_url && (
+                        <a href={artifact.github_url} target="_blank" rel="noopener noreferrer" className="hover:text-blue-600 transition-colors">
+                          <Github className="h-4 w-4" />
+                        </a>
+                      )}
+                      {artifact.demo_url && (
+                        <a href={artifact.demo_url} target="_blank" rel="noopener noreferrer" className="hover:text-blue-600 transition-colors">
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
-          </div>
-        )}
-        
-        {currentView === 'curator' && (
-          <div className="space-y-8">
-            <div className="text-center space-y-4">
-              <h2 className="text-4xl font-bold text-white mb-4">
-                🤖 AI Curator Assistant
+          </TabsContent>
+          
+          {/* AI Curator Tab */}
+          <TabsContent value="curator" className="space-y-6">
+            <div className="text-center space-y-4 mb-8">
+              <h2 className="text-3xl font-bold text-slate-800 flex items-center justify-center">
+                <Bot className="h-8 w-8 mr-3 text-blue-500" />
+                AI Portfolio Curator
+                <Sparkles className="h-8 w-8 ml-3 text-yellow-500" />
               </h2>
-              <p className="text-purple-300 text-lg max-w-2xl mx-auto">
-                Your personal guide through Corey's portfolio. Ask questions, request tours, or get detailed explanations about any project.
+              <p className="text-slate-600 max-w-2xl mx-auto">
+                Chat with my AI curator to learn about my projects, get personalized recommendations, 
+                and receive guided tours through my portfolio.
               </p>
             </div>
             
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <Card className="bg-black/30 border-purple-500/50">
+            <div className="grid lg:grid-cols-2 gap-6">
+              {/* Chat Interface */}
+              <Card className="border-l-4 border-l-green-500/50">
                 <CardHeader>
-                  <CardTitle className="text-white flex items-center">
-                    <Bot className="h-5 w-5 mr-2 text-purple-400" />
-                    Voice Interaction
+                  <CardTitle className="flex items-center">
+                    <Bot className="h-5 w-5 mr-2 text-green-600" />
+                    Chat with AI Curator
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="text-center py-8">
-                    <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-4 ${
-                      isListening 
-                        ? 'bg-gradient-to-br from-purple-500 to-pink-500 animate-pulse' 
-                        : 'bg-purple-600/20 border-2 border-purple-500/50'
-                    }`}>
-                      {isListening ? (
-                        <Volume2 className="h-10 w-10 text-white" />
-                      ) : (
-                        <VolumeX className="h-10 w-10 text-purple-400" />
-                      )}
-                    </div>
-                    <p className="text-purple-300 mb-4">
-                      {isListening ? 'Listening...' : 'Click to start voice interaction'}
-                    </p>
-                    <Button 
-                      onClick={() => setIsListening(!isListening)}
-                      className="bg-purple-600 hover:bg-purple-700"
+                <CardContent>
+                  <ScrollArea className="h-96 w-full border rounded-md p-4 mb-4 bg-gradient-to-b from-slate-50 to-white">
+                    {curatorState.interactions.length === 0 ? (
+                      <div className="text-center text-slate-500 py-8">
+                        <Bot className="h-12 w-12 mx-auto mb-4 text-slate-400" />
+                        <p className="text-lg font-medium mb-2">Hello! I'm your AI curator.</p>
+                        <p className="text-sm">Ask me about Corey's projects, skills, or request a guided tour!</p>
+                        <div className="flex items-center justify-center mt-4 space-x-2">
+                          <Sparkles className="h-4 w-4 text-yellow-500" />
+                          <span className="text-xs text-slate-400">Try: "Tell me about the Neural Network project"</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {curatorState.interactions.map((interaction: AiCuratorInteraction) => (
+                          <div key={interaction.id} className="space-y-2">
+                            <div className="bg-blue-50 rounded-lg p-3 ml-12 border border-blue-200">
+                              <p className="text-sm">{interaction.user_input}</p>
+                            </div>
+                            <div className="bg-green-50 rounded-lg p-3 mr-12 border border-green-200">
+                              <p className="text-sm">{interaction.curator_response}</p>
+                              <p className="text-xs text-slate-500 mt-1">
+                                {interaction.created_at.toLocaleTimeString()}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </ScrollArea>
+                  
+                  <div className="flex space-x-2">
+                    <Input
+                      placeholder="Ask about projects, skills, or request a tour..."
+                      value={curatorInput}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCuratorInput(e.target.value)}
+                      onKeyPress={(e: React.KeyboardEvent) => {
+                        if (e.key === 'Enter') {
+                          handleCuratorInteraction(curatorInput, 'text');
+                        }
+                      }}
+                      className="focus:ring-2 focus:ring-blue-500"
+                    />
+                    <Button
+                      onClick={() => handleCuratorInteraction(curatorInput, 'text')}
+                      disabled={!curatorInput.trim() || curatorState.isSpeaking}
+                      className="bg-gradient-to-r from-blue-500 to-indigo-600"
                     >
-                      {isListening ? 'Stop Listening' : 'Start Voice Chat'}
+                      {curatorState.isSpeaking ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
                     </Button>
                   </div>
                 </CardContent>
               </Card>
               
-              <Card className="bg-black/30 border-purple-500/50">
+              {/* Curator Status */}
+              <Card className="border-l-4 border-l-purple-500/50">
                 <CardHeader>
-                  <CardTitle className="text-white">Quick Commands</CardTitle>
+                  <CardTitle className="flex items-center">
+                    <Activity className="h-5 w-5 mr-2 text-purple-600" />
+                    Curator Status
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
-                    {[
-                      { command: '"Show me AI projects"', description: 'Filter by AI category' },
-                      { command: '"Tell me about featured work"', description: 'Highlight featured projects' },
-                      { command: '"Start gallery tour"', description: 'Begin guided 3D tour' },
-                      { command: '"Show progress updates"', description: 'View current project status' },
-                      { command: '"Explain this project"', description: 'Get detailed information' }
-                    ].map((item, index) => (
-                      <div key={index} className="flex items-start space-x-3 p-3 rounded-lg bg-purple-900/20 hover:bg-purple-900/30 transition-colors">
-                        <Zap className="h-4 w-4 text-purple-400 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <p className="text-purple-200 font-medium">{item.command}</p>
-                          <p className="text-purple-400 text-sm">{item.description}</p>
-                        </div>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600">Status</span>
+                      <Badge variant={curatorState.isActive ? 'default' : 'secondary'} className="bg-gradient-to-r from-green-500 to-green-600">
+                        {curatorState.isActive ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600">Voice Recognition</span>
+                      <Badge variant={curatorState.isListening ? 'default' : 'secondary'}>
+                        {curatorState.isListening ? 'Listening' : 'Paused'}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600">Mood</span>
+                      <Badge variant="outline" className="capitalize border-yellow-300 text-yellow-700 bg-yellow-50">
+                        {curatorState.mood}
+                      </Badge>
+                    </div>
+                    {curatorState.context && (
+                      <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
+                        <span className="text-sm text-slate-600">Current Context</span>
+                        <p className="text-sm font-medium">{curatorState.context.title}</p>
                       </div>
-                    ))}
+                    )}
                   </div>
                 </CardContent>
               </Card>
             </div>
-          </div>
-        )}
-        
-        {currentView === 'progress' && (
-          <div className="space-y-8">
-            <div className="text-center space-y-4">
-              <h2 className="text-4xl font-bold text-white mb-4">
-                📊 Project Progress & Updates
+          </TabsContent>
+          
+          {/* Collaborative Spaces Tab */}
+          <TabsContent value="collaborate" className="space-y-6">
+            <div className="text-center space-y-4 mb-8">
+              <h2 className="text-3xl font-bold text-slate-800 flex items-center justify-center">
+                <Users className="h-8 w-8 mr-3 text-green-500" />
+                Collaborative Spaces
+                <Coffee className="h-8 w-8 ml-3 text-orange-500" />
               </h2>
-              <p className="text-purple-300 text-lg max-w-2xl mx-auto">
-                Track ongoing projects, milestones, and daily changes in Corey's portfolio development.
+              <p className="text-slate-600 max-w-2xl mx-auto">
+                Join virtual meeting rooms, provide feedback on projects, and collaborate in real-time 
+                with trauma-informed design principles.
+              </p>
+            </div>
+            
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {collaborativeSpaces.map((space: CollaborativeSpace) => (
+                <Card key={space.id} className="group hover:shadow-lg transition-all duration-300 border-l-4 border-l-green-500/50">
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Monitor className="h-5 w-5 mr-2 text-green-600" />
+                      {space.name}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <CardDescription className="mb-4">
+                      {space.description}
+                    </CardDescription>
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-slate-600">Type</span>
+                        <Badge variant="outline" className="capitalize border-green-300 text-green-700 bg-green-50">
+                          {space.space_type.replace('_', ' ')}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-slate-600">Max Participants</span>
+                        <span className="font-medium">{space.max_participants}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-slate-600">Status</span>
+                        <Badge variant={space.is_active ? 'default' : 'secondary'} className="bg-gradient-to-r from-green-500 to-green-600">
+                          {space.is_active ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </div>
+                    </div>
+                    <Button className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700" disabled={!space.is_active}>
+                      <Users className="h-4 w-4 mr-2" />
+                      Join Space
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+          
+          {/* Progress Tracker Tab */}
+          <TabsContent value="progress" className="space-y-6">
+            <div className="text-center space-y-4 mb-8">
+              <h2 className="text-3xl font-bold text-slate-800 flex items-center justify-center">
+                <TrendingUp className="h-8 w-8 mr-3 text-green-500" />
+                Progress Tracker
+                <Target className="h-8 w-8 ml-3 text-blue-500" />
+              </h2>
+              <p className="text-slate-600 max-w-2xl mx-auto">
+                Track project milestones and completion progress with visual indicators 
+                and predictable updates.
               </p>
             </div>
             
             <div className="space-y-6">
-              {progressTrackers.length > 0 ? (
-                progressTrackers.map((tracker: ProgressTracker) => (
-                  <Card key={tracker.id} className="bg-black/30 border-purple-500/50">
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-white">{tracker.project_name}</CardTitle>
-                        <Badge variant="outline" className="border-purple-500/50 text-purple-300">
-                          {tracker.completion_percentage}% Complete
-                        </Badge>
-                      </div>
-                      <CardDescription className="text-purple-300">
-                        Current Phase: {tracker.current_phase}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        <Progress 
-                          value={tracker.completion_percentage} 
-                          className="h-2"
-                        />
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {tracker.milestones.map((milestone, index) => (
-                            <div key={index} className="flex items-center space-x-2">
-                              <div className={`w-3 h-3 rounded-full ${
-                                milestone.completed ? 'bg-green-500' : 'bg-purple-500/50'
-                              }`} />
-                              <span className={`text-sm ${
-                                milestone.completed ? 'text-green-300' : 'text-purple-300'
-                              }`}>
-                                {milestone.name}
-                              </span>
-                            </div>
-                          ))}
+              {progressTrackers.map((tracker: ProgressTracker) => (
+                <Card key={tracker.id} className="border-l-4 border-l-blue-500/50">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center">
+                        <Target className="h-5 w-5 mr-2 text-blue-600" />
+                        {tracker.project_name}
+                      </CardTitle>
+                      <Badge variant="outline" className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-300 text-blue-700">
+                        {tracker.completion_percentage}% Complete
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div>
+                        <div className="flex items-center justify-between text-sm mb-2">
+                          <span className="text-slate-600">Current Phase</span>
+                          <span className="font-medium text-blue-700">{tracker.current_phase}</span>
                         </div>
+                        <Progress value={tracker.completion_percentage} className="h-3 bg-gradient-to-r from-blue-100 to-indigo-100" />
                       </div>
-                    </CardContent>
-                  </Card>
-                ))
-              ) : (
-                <div className="text-center py-12">
-                  <div className="text-purple-300 space-y-4">
-                    <TrendingUp className="h-16 w-16 mx-auto text-purple-400 animate-pulse" />
-                    <p className="text-lg">📈 Progress tracking coming soon...</p>
-                    <p className="text-sm text-purple-400">Project milestones and updates will appear here!</p>
-                  </div>
-                </div>
-              )}
-            </div>
-            
-            {/* Daily Change Logs */}
-            <div className="space-y-6">
-              <h3 className="text-2xl font-semibold text-white flex items-center">
-                <Calendar className="h-6 w-6 mr-2 text-purple-400" />
-                Daily Change Log
-              </h3>
-              
-              {changeLogs.length > 0 ? (
-                <div className="space-y-4">
-                  {changeLogs.map((log: DailyChangeLog) => (
-                    <Card key={log.id} className="bg-black/30 border-purple-500/50">
-                      <CardHeader>
-                        <CardTitle className="text-white text-lg">
-                          {log.date.toLocaleDateString()}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
+                      
+                      <div>
+                        <h4 className="font-medium text-slate-800 mb-3 flex items-center">
+                          <Sparkles className="h-4 w-4 mr-2 text-yellow-500" />
+                          Milestones
+                        </h4>
                         <div className="space-y-2">
-                          {log.changes.map((change, index) => (
-                            <div key={index} className="flex items-start space-x-3">
-                              <Badge 
-                                variant={change.type === 'feature' ? 'default' : 'outline'}
-                                className="mt-0.5 text-xs"
-                              >
-                                {change.type}
-                              </Badge>
-                              <div className="flex-1">
-                                <p className="text-purple-200">{change.description}</p>
-                                <p className="text-purple-400 text-xs">
-                                  Impact: {change.impact}
-                                </p>
+                          {tracker.milestones.map((milestone, index) => (
+                            <div key={index} className="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-200">
+                              <div className="flex items-center space-x-2">
+                                <div className={`w-3 h-3 rounded-full ${
+                                  milestone.completed ? 'bg-green-500' : 'bg-slate-300'
+                                }`} />
+                                <span className={`text-sm ${
+                                  milestone.completed ? 'text-slate-800 font-medium' : 'text-slate-500'
+                                }`}>
+                                  {milestone.name}
+                                </span>
                               </div>
+                              {milestone.due_date && (
+                                <span className="text-xs text-slate-500 bg-white px-2 py-1 rounded">
+                                  {milestone.due_date.toLocaleDateString()}
+                                </span>
+                              )}
                             </div>
                           ))}
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <div className="text-purple-300 space-y-4">
-                    <Calendar className="h-12 w-12 mx-auto text-purple-400 animate-pulse" />
-                    <p className="text-lg">📅 Change logs will appear here...</p>
-                  </div>
-                </div>
-              )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
-          </div>
-        )}
-        
-        {currentView === 'collaboration' && (
-          <div className="space-y-8">
-            <div className="text-center space-y-4">
-              <h2 className="text-4xl font-bold text-white mb-4">
-                🤝 Collaborative Spaces
+          </TabsContent>
+          
+          {/* Daily Change Log Tab */}
+          <TabsContent value="changelog" className="space-y-6">
+            <div className="text-center space-y-4 mb-8">
+              <h2 className="text-3xl font-bold text-slate-800 flex items-center justify-center">
+                <FileText className="h-8 w-8 mr-3 text-blue-500" />
+                Daily Change Log
+                <Clock className="h-8 w-8 ml-3 text-slate-500" />
               </h2>
-              <p className="text-purple-300 text-lg max-w-2xl mx-auto">
-                Connect with Corey in virtual meeting rooms, feedback spaces, and presentation areas designed for productive collaboration.
+              <p className="text-slate-600 max-w-2xl mx-auto">
+                Track daily updates, improvements, and changes to projects with clear 
+                documentation and impact assessments.
               </p>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {collaborativeSpaces.length > 0 ? (
-                collaborativeSpaces.map((space: CollaborativeSpace) => (
-                  <Card key={space.id} className="bg-black/30 border-purple-500/50 hover:border-purple-400 transition-all duration-300">
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-white">{space.name}</CardTitle>
-                        <Badge 
-                          variant={space.is_active ? 'default' : 'outline'}
-                          className={space.is_active ? 'bg-green-600' : 'border-purple-500/50 text-purple-300'}
-                        >
-                          {space.is_active ? 'Active' : 'Available'}
-                        </Badge>
-                      </div>
-                      <CardDescription className="text-purple-300">
-                        {space.description}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-purple-300">Type:</span>
-                          <span className="text-purple-200 capitalize">
-                            {space.space_type.replace('_', ' ')}
-                          </span>
+            <div className="space-y-6">
+              {changeLogs.map((log: DailyChangeLog) => (
+                <Card key={log.id} className="border-l-4 border-l-indigo-500/50">
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Calendar className="h-5 w-5 mr-2 text-indigo-600" />
+                      {log.date.toLocaleDateString()}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {log.changes.map((change, index) => (
+                        <div key={index} className="flex items-start space-x-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                          <Badge 
+                            variant={change.type === 'feature' ? 'default' : 'secondary'}
+                            className={`mt-0.5 ${
+                              change.type === 'feature' ? 'bg-gradient-to-r from-blue-500 to-indigo-600' :
+                              change.type === 'improvement' ? 'bg-gradient-to-r from-green-500 to-green-600' :
+                              'bg-gradient-to-r from-orange-500 to-red-600'
+                            }`}
+                          >
+                            {change.type}
+                          </Badge>
+                          <div className="flex-1">
+                            <p className="text-sm text-slate-800 font-medium">{change.description}</p>
+                            <div className="flex items-center mt-2">
+                              <span className="text-xs text-slate-500 mr-2">Impact:</span>
+                              <Badge 
+                                variant="outline" 
+                                className={`text-xs ${
+                                  change.impact === 'high' ? 'border-red-300 text-red-600 bg-red-50' :
+                                  change.impact === 'medium' ? 'border-yellow-300 text-yellow-600 bg-yellow-50' :
+                                  'border-green-300 text-green-600 bg-green-50'
+                                }`}
+                              >
+                                {change.impact}
+                              </Badge>
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-purple-300">Max Participants:</span>
-                          <span className="text-purple-200">{space.max_participants}</span>
-                        </div>
-                        <Separator className="bg-purple-500/30" />
-                        <Button 
-                          className="w-full bg-purple-600 hover:bg-purple-700"
-                          disabled={!space.is_active}
-                        >
-                          <Users className="h-4 w-4 mr-2" />
-                          {space.is_active ? 'Join Space' : 'Space Unavailable'}
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              ) : (
-                <div className="col-span-full text-center py-12">
-                  <div className="text-purple-300 space-y-4">
-                    <Users className="h-16 w-16 mx-auto text-purple-400 animate-pulse" />
-                    <p className="text-lg">🏢 Collaboration spaces coming soon...</p>
-                    <p className="text-sm text-purple-400">Virtual meeting rooms and feedback areas will be available here!</p>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+          
+          {/* About Tab */}
+          <TabsContent value="about" className="space-y-6">
+            <div className="text-center space-y-4 mb-8">
+              <h2 className="text-3xl font-bold text-slate-800 flex items-center justify-center">
+                <Heart className="h-8 w-8 mr-3 text-red-500" />
+                About This Portfolio
+                <Leaf className="h-8 w-8 ml-3 text-green-500" />
+              </h2>
+              <p className="text-slate-600 max-w-2xl mx-auto">
+                A trauma-informed, neurodivergent-friendly portfolio experience with 
+                Studio Ghibli-inspired design and Tron-like technological aesthetics.
+              </p>
+            </div>
+            
+            <div className="grid md:grid-cols-2 gap-6">
+              <Card className="border-l-4 border-l-blue-500/50">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Accessibility className="h-5 w-5 mr-2 text-blue-600" />
+                    Accessibility Features
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-3 p-2 bg-blue-50 rounded-lg">
+                      <Mic className="h-4 w-4 text-blue-500" />
+                      <span className="text-sm">Voice commands and recognition</span>
+                    </div>
+                    <div className="flex items-center space-x-3 p-2 bg-blue-50 rounded-lg">
+                      <Keyboard className="h-4 w-4 text-blue-500" />
+                      <span className="text-sm">Full keyboard navigation</span>
+                    </div>
+                    <div className="flex items-center space-x-3 p-2 bg-blue-50 rounded-lg">
+                      <Eye className="h-4 w-4 text-blue-500" />
+                      <span className="text-sm">Screen reader compatibility</span>
+                    </div>
+                    <div className="flex items-center space-x-3 p-2 bg-blue-50 rounded-lg">
+                      <Contrast className="h-4 w-4 text-blue-500" />
+                      <span className="text-sm">High contrast mode</span>
+                    </div>
+                    <div className="flex items-center space-x-3 p-2 bg-blue-50 rounded-lg">
+                      <Type className="h-4 w-4 text-blue-500" />
+                      <span className="text-sm">Adjustable text size</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card className="border-l-4 border-l-green-500/50">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Palette className="h-5 w-5 mr-2 text-green-600" />
+                    Design Philosophy
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-3 p-2 bg-green-50 rounded-lg">
+                      <Wind className="h-4 w-4 text-green-500" />
+                      <span className="text-sm">Studio Ghibli-inspired gentle aesthetics</span>
+                    </div>
+                    <div className="flex items-center space-x-3 p-2 bg-cyan-50 rounded-lg">
+                      <Zap className="h-4 w-4 text-cyan-500" />
+                      <span className="text-sm">Tron-like technological elements</span>
+                    </div>
+                    <div className="flex items-center space-x-3 p-2 bg-blue-50 rounded-lg">
+                      <Shield className="h-4 w-4 text-blue-500" />
+                      <span className="text-sm">Trauma-informed design principles</span>
+                    </div>
+                    <div className="flex items-center space-x-3 p-2 bg-red-50 rounded-lg">
+                      <Heart className="h-4 w-4 text-red-500" />
+                      <span className="text-sm">Neurodivergent-friendly interface</span>
+                    </div>
+                    <div className="flex items-center space-x-3 p-2 bg-yellow-50 rounded-lg">
+                      <Sparkles className="h-4 w-4 text-yellow-500" />
+                      <span className="text-sm">Predictable and clear interactions</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            
+            <Card className="border-l-4 border-l-purple-500/50">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Coffee className="h-5 w-5 mr-2 text-purple-600" />
+                  Technology Stack
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    <h4 className="font-medium text-slate-800 mb-2 flex items-center">
+                      <Layers className="h-4 w-4 mr-2 text-blue-500" />
+                      Frontend
+                    </h4>
+                    <div className="space-y-1 text-sm text-slate-600">
+                      <div>React + TypeScript</div>
+                      <div>Radix UI Components</div>
+                      <div>Tailwind CSS</div>
+                      <div>Three.js for 3D</div>
+                    </div>
+                  </div>
+                  <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    <h4 className="font-medium text-slate-800 mb-2 flex items-center">
+                      <Shield className="h-4 w-4 mr-2 text-green-500" />
+                      Backend
+                    </h4>
+                    <div className="space-y-1 text-sm text-slate-600">
+                      <div>tRPC API</div>
+                      <div>Drizzle ORM</div>
+                      <div>PostgreSQL</div>
+                      <div>Zod Validation</div>
+                    </div>
+                  </div>
+                  <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    <h4 className="font-medium text-slate-800 mb-2 flex items-center">
+                      <Sparkles className="h-4 w-4 mr-2 text-yellow-500" />
+                      Features
+                    </h4>
+                    <div className="space-y-1 text-sm text-slate-600">
+                      <div>3D Gallery</div>
+                      <div>AI Curator</div>
+                      <div>Voice Controls</div>
+                      <div>Real-time Collaboration</div>
+                    </div>
                   </div>
                 </div>
-              )}
-            </div>
-          </div>
-        )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </main>
       
       {/* Footer */}
-      <footer className="border-t border-purple-800/30 bg-black/20 backdrop-blur-md mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center space-y-4">
-            <p className="text-purple-300">
-              ✨ Built with passion by Corey Alejandro
-            </p>
-            <div className="flex justify-center space-x-6 text-sm text-purple-400">
-              <span>🎮 Tron-inspired Design</span>
-              <span>🎬 Cinematic Experience</span>
-              <span>🌟 Studio Ghibli Aesthetics</span>
-              <span>♿ Accessibility First</span>
+      <footer className="bg-slate-800 text-white py-8 mt-12">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row items-center justify-between">
+            <div className="flex items-center space-x-4 mb-4 md:mb-0">
+              <div className="flex items-center space-x-2">
+                <Sparkles className="h-5 w-5 text-yellow-400" />
+                <span className="font-medium">Corey Alejandro</span>
+              </div>
+              <Separator orientation="vertical" className="h-6" />
+              <div className="flex items-center space-x-2">
+                <Bot className="h-4 w-4 text-blue-400" />
+                <span className="text-sm">AI & Data Engineer</span>
+              </div>
             </div>
-            <p className="text-xs text-purple-500">
-              Keyboard shortcuts: Ctrl+1-4 (Navigation), Ctrl+V (Voice), Ctrl+C (Cinema), Ctrl+A (Accessibility)
-            </p>
+            
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2 text-sm text-slate-400">
+                <TreePine className="h-4 w-4" />
+                <span>Studio Ghibli Inspired</span>
+              </div>
+              <div className="flex items-center space-x-2 text-sm text-slate-400">
+                <Zap className="h-4 w-4" />
+                <span>Tron Aesthetic</span>
+              </div>
+              <div className="flex items-center space-x-2 text-sm text-slate-400">
+                <Heart className="h-4 w-4" />
+                <span>Trauma-Informed</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="mt-4 pt-4 border-t border-slate-700 text-center text-sm text-slate-400">
+            <p>© 2024 Corey Alejandro. Designed with accessibility and neurodivergent users in mind.</p>
           </div>
         </div>
       </footer>

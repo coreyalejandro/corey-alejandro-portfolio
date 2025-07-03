@@ -39,7 +39,7 @@ export const createPortfolioArtifact = async (input: CreatePortfolioArtifactInpu
       rotation_y: parseFloat(artifact.rotation_y),
       rotation_z: parseFloat(artifact.rotation_z),
       scale: parseFloat(artifact.scale),
-      tags: artifact.tags as string[]
+      tags: artifact.tags as string[] // Cast JSONB to string array
     };
   } catch (error) {
     console.error('Portfolio artifact creation failed:', error);

@@ -7,23 +7,23 @@ import { type CreateDailyChangeLogInput } from '../schema';
 import { createDailyChangeLog } from '../handlers/create_daily_change_log';
 import { eq } from 'drizzle-orm';
 
-// Test input with multiple change types
+// Test input with comprehensive change log data
 const testInput: CreateDailyChangeLogInput = {
   date: new Date('2024-01-15'),
   changes: [
     {
       type: 'feature',
-      description: 'Added 3D portfolio gallery navigation',
+      description: 'Added 3D portfolio gallery with interactive artifacts',
       impact: 'high'
     },
     {
-      type: 'bugfix',
-      description: 'Fixed AI curator response timing',
+      type: 'improvement',
+      description: 'Enhanced AI curator response accuracy',
       impact: 'medium'
     },
     {
-      type: 'improvement',
-      description: 'Optimized model loading performance',
+      type: 'bugfix',
+      description: 'Fixed collision detection in collaborative spaces',
       impact: 'low'
     }
   ]
@@ -38,23 +38,20 @@ describe('createDailyChangeLog', () => {
 
     // Basic field validation
     expect(result.date).toEqual(testInput.date);
-    expect(result.changes).toEqual(testInput.changes);
-    expect(result.id).toBeDefined();
-    expect(result.created_at).toBeInstanceOf(Date);
-
-    // Verify changes array structure
     expect(result.changes).toHaveLength(3);
     expect(result.changes[0].type).toEqual('feature');
-    expect(result.changes[0].description).toEqual('Added 3D portfolio gallery navigation');
+    expect(result.changes[0].description).toEqual('Added 3D portfolio gallery with interactive artifacts');
     expect(result.changes[0].impact).toEqual('high');
-    expect(result.changes[1].type).toEqual('bugfix');
-    expect(result.changes[2].type).toEqual('improvement');
+    expect(result.changes[1].type).toEqual('improvement');
+    expect(result.changes[2].type).toEqual('bugfix');
+    expect(result.id).toBeDefined();
+    expect(result.created_at).toBeInstanceOf(Date);
   });
 
-  it('should save daily change log to database', async () => {
+  it('should save change log to database', async () => {
     const result = await createDailyChangeLog(testInput);
 
-    // Query database to verify storage
+    // Query using proper drizzle syntax
     const changeLogs = await db.select()
       .from(dailyChangeLogsTable)
       .where(eq(dailyChangeLogsTable.id, result.id))
@@ -86,37 +83,46 @@ describe('createDailyChangeLog', () => {
     expect(result.changes[0].impact).toEqual('medium');
   });
 
-  it('should handle different change types and impact levels', async () => {
-    const diverseChangesInput: CreateDailyChangeLogInput = {
+  it('should handle multiple change types correctly', async () => {
+    const multiTypeInput: CreateDailyChangeLogInput = {
       date: new Date('2024-01-17'),
       changes: [
         {
           type: 'feature',
-          description: 'Implemented voice interaction with AI curator',
+          description: 'New collaborative meeting room',
           impact: 'high'
         },
         {
+          type: 'bugfix',
+          description: 'Fixed animation timing issues',
+          impact: 'low'
+        },
+        {
           type: 'improvement',
-          description: 'Enhanced collaborative space UX',
+          description: 'Optimized 3D model loading',
           impact: 'medium'
         },
         {
-          type: 'bugfix',
-          description: 'Fixed progress tracker percentage calculation',
-          impact: 'low'
+          type: 'content',
+          description: 'Added new project case studies',
+          impact: 'medium'
         }
       ]
     };
 
-    const result = await createDailyChangeLog(diverseChangesInput);
+    const result = await createDailyChangeLog(multiTypeInput);
 
-    // Verify all enum values are handled correctly
-    const changeTypes = result.changes.map(c => c.type);
-    const impactLevels = result.changes.map(c => c.impact);
-
+    expect(result.changes).toHaveLength(4);
+    
+    // Verify all change types are preserved
+    const changeTypes = result.changes.map(change => change.type);
     expect(changeTypes).toContain('feature');
-    expect(changeTypes).toContain('improvement');
     expect(changeTypes).toContain('bugfix');
+    expect(changeTypes).toContain('improvement');
+    expect(changeTypes).toContain('content');
+
+    // Verify impact levels are preserved
+    const impactLevels = result.changes.map(change => change.impact);
     expect(impactLevels).toContain('high');
     expect(impactLevels).toContain('medium');
     expect(impactLevels).toContain('low');

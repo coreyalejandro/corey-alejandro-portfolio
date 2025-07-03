@@ -11,7 +11,11 @@ export const getProgressTrackers = async (): Promise<ProgressTracker[]> => {
 
     return results.map(tracker => ({
       ...tracker,
-      milestones: (tracker.milestones as any[]).map(milestone => ({
+      milestones: (tracker.milestones as Array<{
+        name: string;
+        completed: boolean;
+        due_date: string | null;
+      }>).map(milestone => ({
         ...milestone,
         due_date: milestone.due_date ? new Date(milestone.due_date) : null
       }))
