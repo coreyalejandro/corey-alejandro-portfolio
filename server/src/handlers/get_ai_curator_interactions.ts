@@ -1,9 +1,22 @@
 
+import { db } from '../db';
+import { aiCuratorInteractionsTable } from '../db/schema';
 import { type AiCuratorInteraction } from '../schema';
+import { eq, desc } from 'drizzle-orm';
 
-export async function getAiCuratorInteractions(sessionId: string): Promise<AiCuratorInteraction[]> {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is fetching AI curator interaction history for a session.
-  // This will help maintain conversation context and provide personalized experiences.
-  return Promise.resolve([]);
-}
+export const getAiCuratorInteractions = async (sessionId: string): Promise<AiCuratorInteraction[]> => {
+  try {
+    // Fetch all interactions for the given session, ordered by creation date (newest first)
+    const results = await db.select()
+      .from(aiCuratorInteractionsTable)
+      .where(eq(aiCuratorInteractionsTable.session_id, sessionId))
+      .orderBy(desc(aiCuratorInteractionsTable.created_at))
+      .execute();
+
+    // Return the results as-is since all fields are already the correct types
+    return results;
+  } catch (error) {
+    console.error('Failed to fetch AI curator interactions:', error);
+    throw error;
+  }
+};

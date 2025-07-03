@@ -1,14 +1,27 @@
 
+import { db } from '../db';
+import { dailyChangeLogsTable } from '../db/schema';
 import { type CreateDailyChangeLogInput, type DailyChangeLog } from '../schema';
 
-export async function createDailyChangeLog(input: CreateDailyChangeLogInput): Promise<DailyChangeLog> {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is logging daily development changes and updates.
-  // This will maintain a transparent record of portfolio evolution.
-  return Promise.resolve({
-    id: 0,
-    date: input.date,
-    changes: input.changes,
-    created_at: new Date()
-  });
-}
+export const createDailyChangeLog = async (input: CreateDailyChangeLogInput): Promise<DailyChangeLog> => {
+  try {
+    // Insert daily change log record
+    const result = await db.insert(dailyChangeLogsTable)
+      .values({
+        date: input.date,
+        changes: input.changes
+      })
+      .returning()
+      .execute();
+
+    // Convert the result to match the expected schema type
+    const changeLog = result[0];
+    return {
+      ...changeLog,
+      changes: changeLog.changes as DailyChangeLog['changes']
+    };
+  } catch (error) {
+    console.error('Daily change log creation failed:', error);
+    throw error;
+  }
+};

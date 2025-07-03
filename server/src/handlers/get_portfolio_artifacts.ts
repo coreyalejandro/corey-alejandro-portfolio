@@ -1,9 +1,28 @@
 
+import { db } from '../db';
+import { portfolioArtifactsTable } from '../db/schema';
 import { type PortfolioArtifact } from '../schema';
 
-export async function getPortfolioArtifacts(): Promise<PortfolioArtifact[]> {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is fetching all portfolio artifacts for the 3D gallery.
-  // This will populate the immersive 3D space with interactive portfolio items.
-  return Promise.resolve([]);
-}
+export const getPortfolioArtifacts = async (): Promise<PortfolioArtifact[]> => {
+  try {
+    const results = await db.select()
+      .from(portfolioArtifactsTable)
+      .execute();
+
+    // Convert numeric fields back to numbers and parse JSON fields
+    return results.map(artifact => ({
+      ...artifact,
+      position_x: parseFloat(artifact.position_x),
+      position_y: parseFloat(artifact.position_y),
+      position_z: parseFloat(artifact.position_z),
+      rotation_x: parseFloat(artifact.rotation_x),
+      rotation_y: parseFloat(artifact.rotation_y),
+      rotation_z: parseFloat(artifact.rotation_z),
+      scale: parseFloat(artifact.scale),
+      tags: artifact.tags as string[] // JSONB field
+    }));
+  } catch (error) {
+    console.error('Portfolio artifacts fetch failed:', error);
+    throw error;
+  }
+};

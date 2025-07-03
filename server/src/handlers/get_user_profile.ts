@@ -1,17 +1,33 @@
 
+import { db } from '../db';
+import { usersTable } from '../db/schema';
 import { type User } from '../schema';
+import { eq } from 'drizzle-orm';
 
 export async function getUserProfile(): Promise<User | null> {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is fetching Corey Alejandro's profile information.
-  // This will be used to display his name, title, bio, and avatar in the portfolio.
-  return Promise.resolve({
-    id: 1,
-    name: "Corey Alejandro",
-    title: "AI & Data Engineer",
-    bio: "Passionate about creating intelligent systems and beautiful data visualizations.",
-    avatar_url: null,
-    created_at: new Date(),
-    updated_at: new Date()
-  });
+  try {
+    // Get the first user record (assuming single user portfolio)
+    const results = await db.select()
+      .from(usersTable)
+      .limit(1)
+      .execute();
+
+    if (results.length === 0) {
+      return null;
+    }
+
+    const user = results[0];
+    return {
+      id: user.id,
+      name: user.name,
+      title: user.title,
+      bio: user.bio,
+      avatar_url: user.avatar_url,
+      created_at: user.created_at,
+      updated_at: user.updated_at
+    };
+  } catch (error) {
+    console.error('Failed to get user profile:', error);
+    throw error;
+  }
 }

@@ -1,9 +1,20 @@
 
+import { db } from '../db';
+import { collaborativeSpacesTable } from '../db/schema';
 import { type CollaborativeSpace } from '../schema';
 
-export async function getCollaborativeSpaces(): Promise<CollaborativeSpace[]> {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is fetching available collaborative spaces.
-  // This will populate the meeting rooms and feedback areas in the 3D environment.
-  return Promise.resolve([]);
-}
+export const getCollaborativeSpaces = async (): Promise<CollaborativeSpace[]> => {
+  try {
+    const results = await db.select()
+      .from(collaborativeSpacesTable)
+      .execute();
+
+    return results.map(space => ({
+      ...space,
+      // All fields are already in the correct types - no numeric conversions needed
+    }));
+  } catch (error) {
+    console.error('Failed to fetch collaborative spaces:', error);
+    throw error;
+  }
+};

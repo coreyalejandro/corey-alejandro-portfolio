@@ -1,9 +1,23 @@
 
+import { db } from '../db';
+import { progressTrackersTable } from '../db/schema';
 import { type ProgressTracker } from '../schema';
 
-export async function getProgressTrackers(): Promise<ProgressTracker[]> {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is fetching all active progress trackers.
-  // This will display project milestones and completion status in the portfolio.
-  return Promise.resolve([]);
-}
+export const getProgressTrackers = async (): Promise<ProgressTracker[]> => {
+  try {
+    const results = await db.select()
+      .from(progressTrackersTable)
+      .execute();
+
+    return results.map(tracker => ({
+      ...tracker,
+      milestones: (tracker.milestones as any[]).map(milestone => ({
+        ...milestone,
+        due_date: milestone.due_date ? new Date(milestone.due_date) : null
+      }))
+    }));
+  } catch (error) {
+    console.error('Failed to fetch progress trackers:', error);
+    throw error;
+  }
+};
